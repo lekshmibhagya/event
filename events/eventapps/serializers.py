@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import *
 
 
-# class ProfileSerializer(Serializers.ModelSerializer):
+
     
 
 class UserSerializer(serializers.ModelSerializer):

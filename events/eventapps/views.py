@@ -14,17 +14,14 @@ from .permissions import *
 import re
 
 # Create your views here.
-'''signup username and password added to the User table
-other fields profile table '''
 
+#user signup
 @api_view(['POST'])
 def signup(request):
     if request.method=='POST':
         regex=r'[a-zA-Z]+'
         emailregex=r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
         phonenumberregex=r'[0-9]+'
-
-        
         try:
             try:
                 if re.fullmatch(regex,request.data['username']):
@@ -35,11 +32,10 @@ def signup(request):
                
             except Exception as E:
                 return Response({'app_data':'username required','dev_data':str(E)},status=status.HTTP_400_BAD_REQUEST)
-        
-            password=request.data['password']
-            if password is not None:
-                pass
-            else:
+            try:
+                password=request.data['password']
+            
+            except:
                 return Response({'app_data':'password required','dev_data':'password must be not none'},status=status.HTTP_400_BAD_REQUEST)
             try:
                 name=request.data['name']
@@ -85,7 +81,7 @@ def signup(request):
     return Response({'app_data':'successfully registerd','dev-data':'successfully registerd','data':data},status=status.HTTP_201_CREATED)
 
           
-
+#user login
 @api_view(['POST'])
 def login(request):
     
@@ -100,6 +96,7 @@ def login(request):
             else:
                 return Response({'app_data':'This username  has not been registered. Please signup to continue','dev_data':'This email deosnot exists'}, status = status.HTTP_400_BAD_REQUEST)
             user=authenticate(username=username,password=password)
+            
             if not user==None:
                 refresh = RefreshToken.for_user(user)
                 data = {}
@@ -110,6 +107,8 @@ def login(request):
                 return Response({'app_data':'failed','dev_data':'failed'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as E:
             return Response({'app_data':'Something went wrong', 'dev_data':str(E)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 @permission_classes([IsAuthenticated])        
 @api_view(['PUT'])
 def editProfile(request):
@@ -120,9 +119,9 @@ def editProfile(request):
     if request.method=='PUT':
         try:
             user_obj=User.objects.get(id=request.user.id)
-            print(user_obj)
+            
             profile_obj=Profile.objects.get(user=user_obj)
-            print(profile_obj)
+            
             if profilePermissions(user_obj,profile_obj):
                 try:
                     if re.fullmatch(regex,request.data['name']):
@@ -157,58 +156,49 @@ def editProfile(request):
 
         except Exception as E:
             return Response({'app_data':'something went wrong','dev_data':str(E)},status=status.HTTP_400_BAD_REQUEST)
-  
+
+#function to check  multiple images uploaded or extension other than png,jpg,jpeg
 def imageUpload(file):
     image_allowed=['png','jpg','jpeg']
    
     try:        
-        print("dfgsdf")
-        print('length is:',len(file))
+    
         if not file==None:
-            print('length is:',len(file))
             if len(file)>1:
-                print("hai")
-                
                 return False
             else:
-                print("5645")
                 for image in file:
                     images=str(image)
                     image_format=images.split('.')[-1]
-                    print("hui")
-                    print('images is',images)
-                    print('image format',image_format)
                     if image_format in image_allowed:
-                        # data=Event(image=image)
-                        # data.save()
                         image_upload=image
                         print('image_permitted',image_upload)
-                        
                         return image_upload
                     else:
                         return False
+
     except Exception as E:
          return str(E)
 
+#creat event
 @permission_classes([IsAuthenticated])
 @api_view(['POST'])
 def createEvent(request):
     if request.method=='POST':
-        
-        # try:
+        try:
+
             eventname=request.data['eventname']
+
+            #check eventname alreay exsisting for the current user
+
             data=Event.objects.filter(owner__user__id=request.user.id)
             print(data)
-            if eventname is not None:
+            if not eventname==None:
                 for i in data:
                     evnt_name=i.event_name
                     if (evnt_name==eventname):
-
                         return Response({'app_data':'this user have already this event','dev_data':'user have already this event'},status=status.HTTP_400_BAD_REQUEST)
             
-
-         
-               
             try:
                 about=request.data['about']
             except:
@@ -226,37 +216,34 @@ def createEvent(request):
             except:
                 return Response({'app_data':'end date required','dev_data':'end date required'},status=status.HTTP_400_BAD_REQUEST)
             try:
-                
-                file=request.data.pop('file')
+
+                file=request.data.pop('file') #get multiple images
                 print('file is a list :',file)
                 if not file==None:
                     try:
-                        data=imageUpload(file)
+                        data=imageUpload(file) #check  multiple images uploaded or extension other than png,jpg,jpeg
                         if imageUpload(file):
                             var=imageUpload(file)
                             print("var is the image permitted to upload : ",var)
                         else:
                             return Response({'app_data':'not permitted multiple images and file format otherthan png,jpeg,jpeg','dev_data':'not permitted multiple images and file format otherthan png,jpeg,jpeg'},status=status.HTTP_405_METHOD_NOT_ALLOWED)
-                       
                     except Exception as E:
                         print(str(E))
                 else:
                     return Response({'app_data':'image required','dev_data':'image required'},status=status.HTTP_400_BAD_REQUEST)
 
-               
-                
-                
             except Exception as E:
                 return Response({'app_data':'image required','dev_data':str(E)},status=status.HTTP_400_BAD_REQUEST)
-            # if Event.objects.filter(owner__user__id=request.user.id).exists:
-            user=Profile.objects.get(user_id=request.user.id)
-            print(user,'337')
+           
+            user=Profile.objects.get(user_id=request.user.id) #to add profile object to event 
             data=Event.objects.create(event_name=eventname,about=about,location=location,start_date=start_date,end_date=end_date,image=var,owner =user)
-            
             
             return Response({'app_data':"succesfully created","dev_data":"created"},status=status.HTTP_201_CREATED)
 
-     
+        except Exception as E:
+            return Response({'app_data':"something went wrong","dev_data":str(E)},status=status.HTTP_400_BAD_REQUEST)
+
+#edit current user event   
 @permission_classes([IsAuthenticated])
 @api_view(['PUT'])
 def editEvent(request,uid):
@@ -307,33 +294,27 @@ def editEvent(request,uid):
                     else:
                         return Response({'app_data':'not permitted multiple images and file format otherthan png,jpeg,jpeg','dev_data':'not permitted multiple images and file format otherthan png,jpeg,jpeg'},status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-                  
                 except:
                     return Response({'app_data':'image required','dev_data':'image required'},status=status.HTTP_400_BAD_REQUEST)
             
                 
                 data_obj=Event.objects.filter(id=uid)
-                print(data_obj)
-                
-
                 data_obj.update(event_name=eventname,about=about,location=location,start_date=start_date,end_date=end_date,image=var)
                 data_obj.update()
+
                 return Response({'app_data':"succesfully updated","dev_data":"updated"},status=status.HTTP_201_CREATED)
             else:
                 return Response({'app_data':"permission not allowed","dev_data":" not updated"},status=status.HTTP_400_BAD_REQUEST)
 
-                # da=event_profile.owner(owner__user__id=request.user.id)
-                
-                
-            
+               
         except Exception as E:
             return Response({'app_data':"something went wrong","dev_data":str(E)},status=status.HTTP_400_BAD_REQUEST)
 
-
+#delete current user event
 @permission_classes([IsAuthenticated])
-@api_view(['POST'])
+@api_view(['DELETE'])
 def deleteEvent(request,did):
-    if request.method=='POST':
+    if request.method=='DELETE':
         try:
             profile_obj=Profile.objects.get(user=request.user)
             print(profile_obj)
@@ -349,6 +330,8 @@ def deleteEvent(request,did):
                 return Response({'app_data':'dont have permission to delete the event','dev_data':'permission required'},status=status.HTTP_400_BAD_REQUEST)   
         except Exception as E:
             return Response({'app_data':"something went wrong","dev_data":str(E)},status=status.HTTP_400_BAD_REQUEST)
+
+#view current user events
 @permission_classes([IsAuthenticated])           
 @api_view(['GET'])
 def viewMyEvents(request):
@@ -358,8 +341,11 @@ def viewMyEvents(request):
             events=Event.objects.filter(owner__user__id=request.user.id)
             event_serializers=EventSerializer(events,many=True)
             return Response(event_serializers.data)
+        
         except Exception as E:
             return Response({'app_data':'something went wrong','dev_data':str(E)},status=status.HTTP_400_BAD_REQUEST)
+
+#view all events
 @permission_classes([IsAuthenticated])
 @api_view(['GET'])
 def viewAllEvents(request):
@@ -370,6 +356,8 @@ def viewAllEvents(request):
             return Response(event_serializers.data)
         except Exception as E:
             return Response({'app_data':'something went wrong','dev_data':str(E)},status=status.HTTP_400_BAD_REQUEST)
+
+#view current user profile 
 @permission_classes([IsAuthenticated])
 @api_view(['GET'])
 def viewProfile(request):
