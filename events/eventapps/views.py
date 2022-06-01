@@ -263,7 +263,7 @@ def editEvent(request,uid):
    if request.method=='PUT':
         try:
             profile_obj=Profile.objects.get(user=request.user)
-            print(profile_obj)
+           
             print('profile object for permissions',profile_obj)
             event_obj=Event.objects.get(id=uid)
             print("event object is",event_obj)
