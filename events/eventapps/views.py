@@ -258,7 +258,7 @@ def editEvent(request,uid):
                 eventname=request.data['eventname']
                 data=Event.objects.filter(owner__user__id=request.user.id)
                 print('data is',data)
-                if eventname is not None:
+                if not eventname==None:
                     for i in data:
                         name=i.event_name
                         print(name)
